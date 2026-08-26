@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FEWS NET explorer</title>
+<style>
+  :root { --blue: #007ce0; --ink: #1a1a1a; --muted: #6b7280; --line: #e5e7eb; }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; color: var(--ink); }
+  header { padding: 1rem 1.5rem; border-bottom: 1px solid var(--line); display: flex; align-items: baseline; gap: 1rem; flex-wrap: wrap; }
+  header h1 { font-size: 1.15rem; margin: 0; }
+  header .sub { color: var(--muted); font-size: 0.85rem; }
+  main { padding: 1rem 1.5rem 3rem; max-width: 1200px; margin: 0 auto; }
+  .tabs { display: flex; gap: 0.5rem; margin: 0.5rem 0 1rem; }
+  .tabs button { border: 1px solid var(--line); background: #fff; padding: 0.4rem 1rem; border-radius: 999px; cursor: pointer; font-size: 0.9rem; }
+  .tabs button.active { background: var(--blue); border-color: var(--blue); color: #fff; }
+  .controls { display: flex; gap: 0.75rem; flex-wrap: wrap; margin-bottom: 0.75rem; align-items: center; }
+  .controls select, .controls input { padding: 0.35rem 0.5rem; border: 1px solid var(--line); border-radius: 6px; font-size: 0.9rem; max-width: 320px; }
+  .controls input[type=search] { min-width: 200px; }
+  button.dl { background: #fff; border: 1px solid var(--blue); color: var(--blue); border-radius: 6px; padding: 0.35rem 0.8rem; cursor: pointer; }
+  .tablewrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 8px; }
+  table { border-collapse: collapse; width: 100%; font-size: 0.85rem; }
+  th, td { padding: 0.45rem 0.6rem; text-align: left; border-bottom: 1px solid var(--line); white-space: nowrap; }
+  th { background: #f9fafb; position: sticky; top: 0; }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  .note { color: var(--muted); font-size: 0.8rem; margin-top: 0.6rem; }
+  .count { color: var(--muted); font-size: 0.85rem; }
+  .ph { display: inline-block; min-width: 1.4em; text-align: center; border-radius: 3px; font-weight: 600; }
+  .ph1 { background: #cdfacd; } .ph2 { background: #fae61e; }
+  .ph3 { background: #e67800; color: #fff; } .ph4 { background: #c80000; color: #fff; }
+  .ph5 { background: #640000; color: #fff; }
+</style>
+</head>
+<body>
+<header>
+  <h1>FEWS NET classifications explorer</h1>
+  <span class="sub">IPC-compatible acute food insecurity · FEWS NET's own analysis, not the IPC consensus · mirror refreshed daily · <span id="generated"></span></span>
+</header>
+<main>
+  <div class="tabs">
+    <button id="tab-cls" class="active">Classifications</button>
+    <button id="tab-units">Units (latest round)</button>
+  </div>
+
+  <section id="pane-cls">
+    <div class="controls">
+      <select id="cls-country"></select>
+      <select id="cls-round"></select>
+      <select id="cls-scenario">
+        <option value="">All scenarios</option>
+        <option selected value="CS">Current (CS)</option>
+        <option value="ML1">Near-term projection (ML1)</option>
+        <option value="ML2">Medium-term projection (ML2)</option>
+        <option value="ML">Most likely (ML)</option>
+      </select>
+      <select id="cls-assist">
+        <option value="0" selected>Standard map (not allowing for assistance)</option>
+        <option value="1">Allowing for assistance</option>
+        <option value="">Both</option>
+      </select>
+      <input type="search" id="cls-search" placeholder="Search unit…">
+      <span class="count" id="cls-count"></span>
+      <button class="dl" id="cls-dl">Download CSV</button>
+    </div>
+    <div class="tablewrap">
+      <table id="cls-table">
+        <thead><tr>
+          <th>Unit</th><th>Type</th><th>FNID</th><th>Scenario</th>
+          <th>Valid from</th><th>Valid to</th><th>Phase</th>
+          <th>Scale</th><th>Source document</th><th>Status</th>
+        </tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+    <p class="note">One row per geographic unit × scenario per collection round
+    (Food Security Outlooks ~3×/year, plus Outlook Updates and Key Message
+    Updates). The reporting date is the collection round; "valid from/to" is
+    the projection window the phase applies to — a later round's <i>current</i>
+    overlaps an earlier round's <i>projection</i>. Units are FEWS NET's own
+    geography (FNIDs — livelihood-zone × admin intersections, admin units, IDP
+    camps), <b>not</b> COD p-coded admin units, and there are <b>no population-
+    in-phase figures</b>: FEWS NET classifies areas. FEWS NET's analysis is
+    IPC-compatible but is not the IPC/CH consensus — the two can disagree; for
+    the consensus product see the
+    <a href="https://ocha-dap.github.io/ds-ipc-mirror/">IPC/CH mirror</a>.</p>
+  </section>
+
+  <section id="pane-units" hidden>
+    <div class="controls">
+      <select id="unit-country"></select>
+      <input type="search" id="unit-search" placeholder="Search unit / admin / zone…">
+      <span class="count" id="unit-count"></span>
+      <button class="dl" id="unit-dl">Download CSV</button>
+    </div>
+    <div class="tablewrap">
+      <table id="unit-table">
+        <thead><tr>
+          <th>FNID</th><th>Unit</th><th>Admin 1</th><th>Admin 2</th>
+          <th>Livelihood zone</th><th>Type</th><th>Round</th>
+        </tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+    <p class="note">The latest collection round's unit registry, from the FDW
+    shapefile package. Full geometry lives in the team dev blob
+    (<code>projects/ds-fewsnet-mirror/processed/units/{ISO3}.geojson</code>).
+    FNIDs encode the unit vintage — older rounds may sit on older FNIDs that
+    are kept in the DB but whose geometry is not re-fetched.</p>
+  </section>
+</main>
+<script>
+const $ = (s) => document.querySelector(s);
+const fmtFull = (v) => v == null ? "" : Intl.NumberFormat("en").format(v);
+
+function toCSV(rows, cols) {
+  const esc = (v) => v == null ? "" : /[",\n]/.test(String(v)) ? '"' + String(v).replace(/"/g, '""') + '"' : String(v);
+  return [cols.join(",")].concat(rows.map(r => cols.map(c => esc(r[c])).join(","))).join("\n");
+}
+function download(name, text) {
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([text], {type: "text/csv"}));
+  a.download = name; a.click(); URL.revokeObjectURL(a.href);
+}
+function unpack(d) {
+  return d.rows.map(r => Object.fromEntries(d.columns.map((c, i) => [c, r[i]])));
+}
+const phCell = (v) => v == null ? "" :
+  (v >= 1 && v <= 5) ? `<span class="ph ph${Math.round(v)}">${Math.round(v)}</span>` : String(v);
+
+["cls", "units"].forEach(t => $("#tab-" + t).addEventListener("click", () => setTab(t)));
+function setTab(t) {
+  ["cls", "units"].forEach(x => {
+    $("#tab-" + x).classList.toggle("active", x === t);
+    $("#pane-" + x).hidden = x !== t;
+  });
+}
+
+let INDEX = [], CLS = null, UNITS = null;
+
+fetch("data/index.json?" + Date.now()).then(r => r.json()).then(d => {
+  INDEX = d.countries || [];
+  $("#generated").textContent = "data as of " + (d.generated_at || "").slice(0, 10);
+  const opts = INDEX.map(c => `<option value="${c.iso3}">${c.iso3} — ${c.country ?? ""}</option>`).join("");
+  $("#cls-country").innerHTML = opts;
+  $("#unit-country").innerHTML = INDEX.filter(c => c.has_units)
+    .map(c => `<option value="${c.iso3}">${c.iso3} — ${c.country ?? ""}</option>`).join("");
+  loadCls(); loadUnits();
+});
+
+// ---- classifications ----
+$("#cls-country").addEventListener("input", loadCls);
+["cls-round", "cls-scenario", "cls-assist", "cls-search"].forEach(id => $("#" + id).addEventListener("input", renderCls));
+function loadCls() {
+  const iso = $("#cls-country").value;
+  if (!iso) return;
+  fetch(`data/classification/${iso}.json?` + Date.now()).then(r => r.ok ? r.json() : null).then(d => {
+    CLS = d ? unpack(d) : [];
+    const rounds = [...new Set(CLS.map(r => r.reporting_date))].filter(Boolean).sort().reverse();
+    $("#cls-round").innerHTML = '<option value="">All rounds</option>' +
+      rounds.map((a, i) => `<option ${i === 0 ? "selected" : ""}>${a}</option>`).join("");
+    renderCls();
+  });
+}
+function filteredCls() {
+  const a = $("#cls-round").value, sc = $("#cls-scenario").value,
+        as = $("#cls-assist").value, q = $("#cls-search").value.toLowerCase();
+  return (CLS || []).filter(r =>
+    (!a || r.reporting_date === a) && (!sc || r.scenario === sc) &&
+    (as === "" || String(r.assistance ?? 0) === as) &&
+    (!q || (r.unit_name || "").toLowerCase().includes(q) || (r.fnid || "").toLowerCase().includes(q)))
+    .sort((x, y) => (y.reporting_date || "").localeCompare(x.reporting_date || "") ||
+                    (x.unit_name || "").localeCompare(y.unit_name || ""));
+}
+function renderCls() {
+  const rows = filteredCls();
+  $("#cls-count").textContent = fmtFull(rows.length) + " rows";
+  $("#cls-table tbody").innerHTML = rows.slice(0, 2000).map(r => `
+    <tr><td>${r.unit_name ?? ""}</td><td>${r.unit_type ?? ""}</td><td>${r.fnid ?? ""}</td>
+    <td>${r.scenario ?? ""}</td>
+    <td>${r.projection_start ?? ""}</td><td>${r.projection_end ?? ""}</td>
+    <td>${phCell(r.phase)}</td><td>${r.scale ?? ""}</td>
+    <td>${r.source_document ?? ""}</td><td>${r.status ?? ""}</td></tr>`).join("") +
+    (rows.length > 2000 ? `<tr><td colspan="10" class="count">…showing first 2,000 of ${fmtFull(rows.length)} rows — narrow the filters or download the CSV.</td></tr>` : "");
+}
+$("#cls-dl").addEventListener("click", () => {
+  const cols = ["fnid", "unit_name", "unit_type", "scale", "scenario", "assistance", "reporting_date", "projection_start", "projection_end", "source_document", "status", "phase", "description"];
+  download(`fewsnet_classification_${$("#cls-country").value}.csv`, toCSV(filteredCls(), cols));
+});
+
+// ---- units ----
+$("#unit-country").addEventListener("input", loadUnits);
+$("#unit-search").addEventListener("input", renderUnits);
+function loadUnits() {
+  const iso = $("#unit-country").value;
+  if (!iso) return;
+  fetch(`data/units/${iso}.json?` + Date.now()).then(r => r.ok ? r.json() : null).then(d => {
+    UNITS = d ? unpack(d) : [];
+    renderUnits();
+  });
+}
+function filteredUnits() {
+  const q = $("#unit-search").value.toLowerCase();
+  return (UNITS || []).filter(r =>
+    !q || [r.unit_name, r.admin1, r.admin2, r.lzname, r.fnid]
+      .some(n => (n || "").toLowerCase().includes(q)));
+}
+function renderUnits() {
+  const rows = filteredUnits();
+  $("#unit-count").textContent = fmtFull(rows.length) + " units";
+  $("#unit-table tbody").innerHTML = rows.slice(0, 2000).map(r => `
+    <tr><td>${r.fnid ?? ""}</td><td>${r.unit_name ?? ""}</td>
+    <td>${r.admin1 ?? ""}</td><td>${r.admin2 ?? ""}</td>
+    <td>${r.lzname ?? ""}</td><td>${r.unit_type ?? ""}</td>
+    <td>${r.report_mon ?? ""}</td></tr>`).join("") +
+    (rows.length > 2000 ? `<tr><td colspan="7" class="count">…showing first 2,000 of ${fmtFull(rows.length)} units.</td></tr>` : "");
+}
+$("#unit-dl").addEventListener("click", () => {
+  const cols = ["fnid", "unit_name", "admin1", "admin2", "lzname", "unit_type", "report_mon"];
+  download(`fewsnet_units_${$("#unit-country").value}.csv`, toCSV(filteredUnits(), cols));
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,23 @@
+[project]
+name = "ds-fewsnet-mirror"
+version = "0.1.0"
+description = "Mirror of FEWS NET IPC-compatible acute food insecurity classifications (FDW API)"
+requires-python = ">=3.11"
+dependencies = [
+    "requests",
+    "pandas",
+    "pyarrow",
+    "python-dotenv",
+    "ocha-stratus>=0.1.7",
+    "pyshp>=2.3",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src"]
+
+[tool.ruff]
+line-length = 88
