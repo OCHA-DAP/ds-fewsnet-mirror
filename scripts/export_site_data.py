@@ -26,10 +26,13 @@ logger = logging.getLogger(__name__)
 
 SITE_DATA = Path(__file__).parent.parent / "site" / "data"
 
+# Per-row columns; unit identity, source document and status are
+# dictionary-encoded (indices into "units"/"docs"/"statuses" lookups) — the
+# repeated strings were 70% of the payload (Ethiopia alone shipped 39 MB).
 CLASS_ROW_COLS = [
-    "fnid", "unit_name", "unit_type", "scale", "scenario", "assistance",
+    "u", "scale", "scenario", "assistance",
     "reporting_date", "projection_start", "projection_end",
-    "source_document", "status", "phase", "description",
+    "doc", "st", "phase",
 ]
 UNIT_ROW_COLS = [
     "fnid", "unit_name", "admin1", "admin2", "lzname", "unit_type", "report_mon",
@@ -62,12 +65,31 @@ def main():
 
     (SITE_DATA / "classification").mkdir(exist_ok=True)
     for iso3, g in sorted(cls.groupby("iso3")):
-        g = g.sort_values(["reporting_date", "fnid"], ascending=[False, True])
+        g = g.sort_values(["reporting_date", "fnid"], ascending=[False, True]).copy()
+        # Collection rounds are monthly — a full date per row is dead weight.
+        g["reporting_date"] = g["reporting_date"].astype(str).str[:7]
+        for col, key, lookup in (
+            (["fnid", "unit_name", "unit_type"], "u", "units"),
+            (["source_document"], "doc", "docs"),
+            (["status"], "st", "statuses"),
+        ):
+            cat = g[col[0]] if len(col) == 1 else list(
+                g[col].itertuples(index=False, name=None))
+            codes, uniques = pd.factorize(cat if len(col) == 1 else pd.Series(cat))
+            g[key] = codes
+            if len(col) == 1:
+                lookups = [_clean(v) for v in uniques]
+            else:
+                lookups = [[_clean(v) for v in row] for row in uniques]
+            g.attrs[lookup] = lookups
         (SITE_DATA / "classification" / f"{iso3}.json").write_text(
             json.dumps(
                 {
                     "generated_at": generated_at,
                     "iso3": iso3,
+                    "units": g.attrs["units"],
+                    "docs": g.attrs["docs"],
+                    "statuses": g.attrs["statuses"],
                     "columns": CLASS_ROW_COLS,
                     "rows": _rows(g, CLASS_ROW_COLS),
                 }

@@ -155,7 +155,12 @@ function loadCls() {
   const iso = $("#cls-country").value;
   if (!iso) return;
   fetch(`data/classification/${iso}.json?` + Date.now()).then(r => r.ok ? r.json() : null).then(d => {
-    CLS = d ? unpack(d) : [];
+    // Unit identity, source document and status are dictionary-encoded.
+    CLS = d ? unpack(d).map(r => {
+      const u = d.units[r.u] || [];
+      return { ...r, fnid: u[0], unit_name: u[1], unit_type: u[2],
+               source_document: d.docs[r.doc], status: d.statuses[r.st] };
+    }) : [];
     const rounds = [...new Set(CLS.map(r => r.reporting_date))].filter(Boolean).sort().reverse();
     $("#cls-round").innerHTML = '<option value="">All rounds</option>' +
       rounds.map((a, i) => `<option ${i === 0 ? "selected" : ""}>${a}</option>`).join("");
@@ -184,7 +189,7 @@ function renderCls() {
     (rows.length > 2000 ? `<tr><td colspan="10" class="count">…showing first 2,000 of ${fmtFull(rows.length)} rows — narrow the filters or download the CSV.</td></tr>` : "");
 }
 $("#cls-dl").addEventListener("click", () => {
-  const cols = ["fnid", "unit_name", "unit_type", "scale", "scenario", "assistance", "reporting_date", "projection_start", "projection_end", "source_document", "status", "phase", "description"];
+  const cols = ["fnid", "unit_name", "unit_type", "scale", "scenario", "assistance", "reporting_date", "projection_start", "projection_end", "source_document", "status", "phase"];
   download(`fewsnet_classification_${$("#cls-country").value}.csv`, toCSV(filteredCls(), cols));
 });
 
