@@ -24,10 +24,12 @@ Key facts:
 - Every row keys on **both** the collection round (`reporting_date`) and the
   projection window (`projection_start/end`) — a later round's *current*
   overlaps an earlier round's *projection*.
-- The published map is the `assistance = false` series ("not allowing for
-  assistance", preference-rated 90/85); `assistance = true` rows exist only
-  for units where factoring assistance out changes the phase (verified
-  against the package shapefiles, which are the rendered map).
+- `assistance` (FDW `is_allowing_for_assistance`) is the "!" marker on the ONE
+  published row per (fnid, scenario, round): True = FEWS NET draws the unit with
+  "!" (phase held down by humanitarian assistance). It is NOT a parallel series
+  — never filter on it; count every row at its phase. (Verified 2026-09-16
+  against the Oct 2016 ZW package shapefiles' HA0/HA1/HA2 fields; the earlier
+  "published map = assistance=false" reading dropped the "!" units.)
 - `phase` is null with `status` "Not Projected" / "Not Available" where FEWS
   NET did not classify — **absent is not Phase 1**. Shapefile sentinels
   (66 water / 88 parks / 99 no data) appear as null + status here.

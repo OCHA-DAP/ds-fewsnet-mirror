@@ -24,10 +24,10 @@ GH Pages explorer deployed from Actions. Modeled 1:1 on `ds-ipc-mirror`.
   idp_camp / national_park / admin0), vintage encoded in the FNID
   (UG2026C3…). No COD p-codes anywhere; join to our boundaries via the
   package's ADMIN1/ADMIN2 name columns.
-- **The published map = `assistance = false`** ("not allowing for
-  assistance"); True rows exist only where assistance changes the phase.
-  Verified against the package shapefiles (the rendered map): 100% agreement
-  minus sentinel rows.
+- **`assistance` is the "!" marker, not a series**: one published row per
+  (fnid, scenario, round); True = drawn with "!" (phase held down by
+  assistance). Never filter on it — filtering `assistance = false` drops the
+  "!" units (verified against the Oct 2016 ZW package HA0/HA1/HA2 fields).
 - **Absent is not Phase 1**: `phase` null + status Not Projected/Not
   Available = not classified. Shapefile sentinels 66/88/99 (water/park/no
   data) arrive as null + status via the CSV.
