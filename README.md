@@ -34,6 +34,19 @@ Key facts:
   NET did not classify — **absent is not Phase 1**. Shapefile sentinels
   (66 water / 88 parks / 99 no data) appear as null + status here.
 
+## Pipelines (Databricks + GitHub Pages)
+
+The dev DB is reachable only through its private endpoint, so the refresh and
+the site-data export run on Databricks; GitHub Actions only deploys the site.
+
+- **FEWS NET Mirror** (Databricks job, `databricks.yml`) — daily 04:52 UTC: `refresh_fewsnet.py`, then `export_site_data.py`, then parks `site/data/` on the dev blob (`projects/ds-fewsnet-mirror/site-data/`, `scripts/site_data_blob.py upload`).
+- **Deploy explorer site** (`deploy-site.yml`) — daily 08:30 UTC (and on dispatch): copies `site/data/` down from the blob and deploys `site/` to GitHub Pages. Output identical to when the export ran in the workflow.
+
+```sh
+databricks bundle validate -t prod -p DEFAULT
+databricks bundle deploy   -t prod -p DEFAULT   # config changes only; code ships by pushing main
+```
+
 ## Run locally
 
 ```sh
