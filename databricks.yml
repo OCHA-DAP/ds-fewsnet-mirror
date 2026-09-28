@@ -63,12 +63,14 @@ resources:
 
     fewsnet_mirror:
       name: FEWS NET Mirror
-      description: >
-        Daily mirror of FEWS NET FDW classifications into the dev `fewsnet` schema (+ unit geometry on the dev blob), followed by the site-data export to the dev blob for the GitHub Pages explorer.
+      description: "Mirror [FEWS NET](https://fews.net/data) food security classifications and units from the [FDW API](https://fdw.fews.net/api/)"
       git_source: *git_source
       tags:
         databricks: job
-        output_schema: fewsnet
+        type: dataset-ingest
+        kb: fewsnet-mirror
+        output_schema: fewsnet.classification,fewsnet.units
+        output_blob: projects/ds-fewsnet-mirror/processed/units
 
       permissions:
         - group_name: dsci
